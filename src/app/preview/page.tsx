@@ -44,6 +44,7 @@ export default function PreviewPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generationTime, setGenerationTime] = useState<number>(0);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   // Load report data from sessionStorage
   useEffect(() => {
@@ -112,6 +113,31 @@ export default function PreviewPage() {
 
     generate();
   }, [reportData, sections]);
+
+  async function handleCheckout() {
+    if (!reportData) return;
+    setCheckoutLoading(true);
+    try {
+      const reportId = `report-${Date.now()}`;
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: reportData.company.name,
+          reportId,
+        }),
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Checkout failed");
+      setCheckoutLoading(false);
+    }
+  }
 
   if (!reportData) {
     return (
@@ -230,16 +256,17 @@ export default function PreviewPage() {
               </div>
               <div className="flex flex-col items-center gap-3">
                 <button
-                  disabled
-                  className="rounded-lg bg-blue-600 px-8 py-3 text-base font-semibold text-white opacity-60 cursor-not-allowed"
+                  onClick={handleCheckout}
+                  disabled={checkoutLoading}
+                  className="rounded-lg bg-blue-600 px-8 py-3 text-base font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Payments coming soon
+                  {checkoutLoading ? "Redirecting to payment..." : "Unlock Full Report \u2014 \u00a379"}
                 </button>
                 <Link
                   href="/report/editor"
                   className="text-sm font-medium text-blue-600 hover:text-blue-700 underline"
                 >
-                  Preview the report editor (dev mode)
+                  Preview the report editor
                 </Link>
               </div>
               <p className="mt-3 text-xs text-slate-400">

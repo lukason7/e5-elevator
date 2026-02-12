@@ -33,6 +33,7 @@ export default function ReportEditorPage() {
   const [activeSection, setActiveSection] = useState("executive-summary");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [downloading, setDownloading] = useState<"pdf" | "pptx" | null>(null);
 
   // Load generated report from sessionStorage
   useEffect(() => {
@@ -92,6 +93,48 @@ export default function ReportEditorPage() {
     }
   }
 
+  async function handleDownload(format: "pdf" | "pptx") {
+    setDownloading(format);
+    try {
+      const dataStr = sessionStorage.getItem("e5-report-data");
+      const data = dataStr ? JSON.parse(dataStr) : {};
+      const sectionsList = SECTION_META.map((s, idx) => ({
+        id: s.id,
+        title: `${idx + 1}. ${s.title}`,
+        content: editedTexts[s.id] || sections[s.id]?.text || "",
+      }));
+
+      const response = await fetch(`/api/download/${format}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: companyName || "Unknown",
+          industry: data.company?.industry || "Technology",
+          sections: sectionsList,
+          generatedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Download failed");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `E5-Business-Case-${companyName.replace(/[^a-zA-Z0-9]/g, "-")}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(`${format} download error:`, err);
+    } finally {
+      setDownloading(null);
+    }
+  }
+
   const currentText = editedTexts[activeSection] || "";
   const originalText = sections[activeSection]?.text || "";
   const isModified = currentText !== originalText;
@@ -130,11 +173,18 @@ export default function ReportEditorPage() {
             {saving ? "Saving..." : "Save changes"}
           </button>
           <button
-            disabled
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white opacity-60 cursor-not-allowed"
-            title="PDF/PPTX export coming soon"
+            onClick={() => handleDownload("pdf")}
+            disabled={downloading !== null}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
-            Download
+            {downloading === "pdf" ? "Generating..." : "PDF"}
+          </button>
+          <button
+            onClick={() => handleDownload("pptx")}
+            disabled={downloading !== null}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {downloading === "pptx" ? "Generating..." : "PPTX"}
           </button>
         </div>
       </nav>
