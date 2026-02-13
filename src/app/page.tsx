@@ -295,9 +295,9 @@ export default function Home() {
               {" "}· AI-powered M365 E5 business case generation
             </div>
             <div className="flex gap-6">
-              <span>Terms</span>
-              <span>Privacy</span>
-              <span>Contact</span>
+              <Link href="/legal/terms" className="hover:text-slate-600">Terms</Link>
+              <Link href="/legal/privacy" className="hover:text-slate-600">Privacy</Link>
+              <Link href="/legal/ai-disclaimer" className="hover:text-slate-600">AI Disclaimer</Link>
             </div>
           </div>
           <p className="mt-4 text-xs text-slate-400">
